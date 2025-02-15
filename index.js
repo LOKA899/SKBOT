@@ -104,10 +104,29 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.isButton()) {
-        // Check if user has at least participant role for button interactions
+        const [action] = interaction.customId.split('_');
+
+        // Skip role check for joining the lottery
+        if (action === 'join') {
+            const buttonHandler = require('./utils/buttonHandlers');
+            try {
+                console.log(`Processing button interaction: ${interaction.customId}`);
+                await buttonHandler.handleButton(interaction);
+                console.log(`Successfully processed button: ${interaction.customId}`);
+            } catch (error) {
+                console.error('Button interaction error:', error);
+                await interaction.reply({
+                    content: 'There was an error processing this button!',
+                    ephemeral: true
+                }).catch(error => console.error('Failed to send error message:', error));
+            }
+            return;
+        }
+
+        // For other button interactions, check for the participant role
         if (!permissionChecker.hasPermission(interaction.member, 'hlp')) {
             await interaction.reply({
-                content: 'You need at least participant role to interact with the lottery.',
+                content: 'You need at least the participant role to interact with this feature!',
                 ephemeral: true
             });
             return;
