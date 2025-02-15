@@ -268,60 +268,27 @@ async function handleJoinLottery(interaction, lotteryId) {
         return;
     }
 
+    // Defer the reply to avoid the "Unknown interaction" error
+    await interaction.deferReply({ ephemeral: true });
+
     // Skip skull check for /sd command lotteries (they're always free)
     if (lottery.ticketPrice > 0) {
         if (!skullManager.hasEnoughSkulls(interaction.user.id, lottery.ticketPrice)) {
-            await interaction.reply({ 
+            await interaction.editReply({ 
                 content: `You don't have enough skulls to join this lottery. Required: ${lottery.ticketPrice} skulls per ticket. Use /skulls balance to check your balance.`,
-                ephemeral: true 
             });
             return;
         }
     }
 
-    // If this is a raffle or ticket-based lottery, ask for ticket quantity
-    if (lottery.ticketPrice > 0) {
-        const maxAffordableTickets = Math.floor(skullManager.getBalance(interaction.user.id) / lottery.ticketPrice);
-        const actualMaxTickets = Math.min(maxAffordableTickets, lottery.maxTicketsPerUser);
-
-        // Create buttons for different ticket quantities
-        const buttons = [];
-        for (let i = 1; i <= Math.min(5, actualMaxTickets); i++) {
-            buttons.push(
-                new ButtonBuilder()
-                    .setCustomId(`ticket_${lottery.id}_${i}`)
-                    .setLabel(`${i} ticket${i > 1 ? 's' : ''} (${i * lottery.ticketPrice} skulls)`)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        }
-
-        if (actualMaxTickets > 5) {
-            buttons.push(
-                new ButtonBuilder()
-                    .setCustomId(`ticket_${lottery.id}_${actualMaxTickets}`)
-                    .setLabel(`${actualMaxTickets} tickets (${actualMaxTickets * lottery.ticketPrice} skulls)`)
-                    .setStyle(ButtonStyle.Primary)
-            );
-        }
-
-        const row = new ActionRowBuilder().addComponents(buttons);
-
-        await interaction.reply({
-            content: `How many tickets would you like to purchase? (${lottery.ticketPrice} skulls per ticket)`,
-            components: [row],
-            ephemeral: true
-        });
-        return;
-    }
-
     // For free entries (ticketPrice = 0)
     const success = lotteryManager.addParticipant(lotteryId, interaction.user.id);
     if (success) {
-        await interaction.reply({ content: 'You have joined the lottery!', ephemeral: true });
+        await interaction.editReply({ content: 'You have joined the lottery!' });
         // Send DM confirmation
         await notificationManager.sendJoinConfirmation(interaction.user, lottery);
     } else {
-        await interaction.reply({ content: 'You are already participating in this lottery!', ephemeral: true });
+        await interaction.editReply({ content: 'You are already participating in this lottery!' });
     }
 }
 
