@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 const config = require('./config.js');
@@ -32,6 +32,34 @@ for (const file of commandFiles) {
         console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
     }
 }
+
+// Register slash commands
+const rest = new REST({ version: '10' }).setToken(config.token);
+
+(async () => {
+    try {
+        console.log('Started refreshing application (/) commands.');
+
+        // Get all commands from the commands folder
+        const commands = [];
+        for (const file of commandFiles) {
+            const command = require(path.join(commandsPath, file));
+            if ('data' in command && 'execute' in command) {
+                commands.push(command.data.toJSON());
+            }
+        }
+
+        // Register commands with Discord
+        await rest.put(
+            Routes.applicationCommands(config.clientId), // Use your bot's client ID
+            { body: commands },
+        );
+
+        console.log('Successfully reloaded application (/) commands.');
+    } catch (error) {
+        console.error('Error registering commands:', error);
+    }
+})();
 
 // Event handlers
 client.once('ready', () => {
