@@ -35,20 +35,42 @@ module.exports = {
     async execute(interaction) {
         try {
             if (!permissionChecker.hasPermission(interaction.member, 'sd')) {
-                await interaction.reply({ 
-                    content: permissionChecker.getMissingPermissionMessage('sd'),
-                    ephemeral: true 
-                });
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.reply({ 
+                            content: permissionChecker.getMissingPermissionMessage('sd'),
+                            ephemeral: true 
+                        });
+                    } else {
+                        await interaction.followUp({ 
+                            content: permissionChecker.getMissingPermissionMessage('sd'),
+                            ephemeral: true 
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error replying to permission check:', error);
+                }
                 return;
             }
 
             const timeStr = interaction.options.getString('time');
             const duration = parseTime(timeStr);
             if (!duration || duration < config.minTimeLimit || duration > config.defaultMaxTime) {
-                await interaction.reply({
-                    content: `Invalid time format or duration! Please use format like 1h, 30m (minimum ${Math.floor(config.minTimeLimit/60000)}m, maximum 24h)`,
-                    ephemeral: true
-                });
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.reply({
+                            content: `Invalid time format or duration! Please use format like 1h, 30m (minimum ${Math.floor(config.minTimeLimit/60000)}m, maximum 24h)`,
+                            ephemeral: true
+                        });
+                    } else {
+                        await interaction.followUp({
+                            content: `Invalid time format or duration! Please use format like 1h, 30m (minimum ${Math.floor(config.minTimeLimit/60000)}m, maximum 24h)`,
+                            ephemeral: true
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error replying to invalid time:', error);
+                }
                 return;
             }
 
@@ -56,10 +78,21 @@ module.exports = {
             const minParticipants = interaction.options.getInteger('min_participants');
 
             if (minParticipants && minParticipants < winners) {
-                await interaction.reply({
-                    content: 'Minimum participants must be greater than or equal to the number of winners!',
-                    ephemeral: true
-                });
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.reply({
+                            content: 'Minimum participants must be greater than or equal to the number of winners!',
+                            ephemeral: true
+                        });
+                    } else {
+                        await interaction.followUp({
+                            content: 'Minimum participants must be greater than or equal to the number of winners!',
+                            ephemeral: true
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error replying to min participant check:', error);
+                }
                 return;
             }
 
@@ -100,22 +133,41 @@ module.exports = {
                         .setStyle(ButtonStyle.Primary)
                 );
 
-            await interaction.reply({
-                content: 'Please confirm the lottery settings:',
-                embeds: [messageTemplates.createLotteryEmbed(lottery)],
-                components: [confirmRow, drawMethodRow],
-                ephemeral: true
-            });
+            try {
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.reply({
+                        content: 'Please confirm the lottery settings:',
+                        embeds: [messageTemplates.createLotteryEmbed(lottery)],
+                        components: [confirmRow, drawMethodRow],
+                        ephemeral: true
+                    });
+                } else {
+                    await interaction.followUp({
+                        content: 'Please confirm the lottery settings:',
+                        embeds: [messageTemplates.createLotteryEmbed(lottery)],
+                        components: [confirmRow, drawMethodRow],
+                        ephemeral: true
+                    });
+                }
+            } catch (error) {
+                console.error('Error replying with lottery settings:', error);
+            }
 
             lottery.channelId = interaction.channelId;
             lottery.guildId = interaction.guildId;
 
         } catch (error) {
             console.error('Error in lottery command:', error);
-            await interaction.reply({
-                content: 'An error occurred while creating the lottery. Please try again.',
-                ephemeral: true
-            });
+            try {
+                if (!interaction.deferred && !interaction.replied) {
+                    await interaction.reply({
+                        content: 'An error occurred while creating the lottery. Please try again.',
+                        ephemeral: true
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to send error message:', error);
+            }
         }
     }
 };
