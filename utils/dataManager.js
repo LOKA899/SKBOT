@@ -38,13 +38,32 @@ class DataManager {
             }
             console.log('Git initialized successfully.');
 
-            // Set the remote URL
-            exec(`git remote set-url origin ${gitUrl}`, (remoteError) => {
-                if (remoteError) {
-                    console.error('Error setting git remote:', remoteError);
+            // Check if the remote 'origin' already exists
+            exec('git remote -v', (remoteCheckError, stdout) => {
+                if (remoteCheckError) {
+                    console.error('Error checking Git remotes:', remoteCheckError);
                     return;
                 }
-                console.log('Git remote URL set successfully.');
+
+                if (stdout.includes('origin')) {
+                    // If 'origin' exists, update its URL
+                    exec(`git remote set-url origin ${gitUrl}`, (remoteSetError) => {
+                        if (remoteSetError) {
+                            console.error('Error setting Git remote URL:', remoteSetError);
+                            return;
+                        }
+                        console.log('Git remote URL updated successfully.');
+                    });
+                } else {
+                    // If 'origin' does not exist, add it
+                    exec(`git remote add origin ${gitUrl}`, (remoteAddError) => {
+                        if (remoteAddError) {
+                            console.error('Error adding Git remote:', remoteAddError);
+                            return;
+                        }
+                        console.log('Git remote added successfully.');
+                    });
+                }
             });
         });
     }
