@@ -6,7 +6,7 @@ module.exports = {
     // Command permissions
     adminRoleId: '1339134803944935426',
     moderatorRoleId: process.env.MODERATOR_ROLE_ID || '1339134803944935427',
-    participantRoleId: process.env.PARTICIPANT_ROLE_ID || '1339134803944935428',
+    participantRoleId: process.env.PARTICIPANT_ROLE_ID || '1315972763630043156',
 
     // Role permissions
     rolePermissions: {
