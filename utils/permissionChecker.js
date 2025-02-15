@@ -16,7 +16,7 @@ class PermissionChecker {
 
         // Check moderator permissions for lottery creation
         if (['sd', 'rsd', 'cnl', 'rm', 'draw'].includes(command)) {
-            return member.roles.cache.has(config.moderatorRoleId);
+            return member.roles.cache.has(config.administratorRoleId);
         }
 
         // Allow everyone to use other commands
