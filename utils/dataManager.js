@@ -29,12 +29,23 @@ class DataManager {
 
     setupGitConfig() {
         const gitUrl = `https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPO}.git`;
-        exec(`git remote set-url origin ${gitUrl}`, (error) => {
-            if (error) {
-                console.error('Error setting git remote:', error);
-            } else {
-                console.log('Git remote URL set successfully.');
+
+        // Initialize Git if not already initialized
+        exec('git init', (initError) => {
+            if (initError) {
+                console.error('Error initializing Git:', initError);
+                return;
             }
+            console.log('Git initialized successfully.');
+
+            // Set the remote URL
+            exec(`git remote set-url origin ${gitUrl}`, (remoteError) => {
+                if (remoteError) {
+                    console.error('Error setting git remote:', remoteError);
+                    return;
+                }
+                console.log('Git remote URL set successfully.');
+            });
         });
     }
 
