@@ -82,80 +82,48 @@ client.on('interactionCreate', async interaction => {
         }
 
         try {
-            // Defer the reply to avoid the "Unknown interaction" error
-            await interaction.deferReply({ ephemeral: true });
+            // Enhanced logging for debugging
+            console.log(`Executing command: ${interaction.commandName}`);
+            if (interaction.member && interaction.member.roles) {
+                console.log('User roles:', Array.from(interaction.member.roles.cache.map(r => `${r.name} (${r.id})`)));
+            } else {
+                console.log('No member roles available - command might be from DM');
+            }
+            console.log('Command options:', interaction.options.data);
 
-            // Execute the command
             await command.execute(interaction);
             console.log(`Successfully executed command: ${interaction.commandName}`);
         } catch (error) {
-            console.error(`Error executing ${interaction.commandName}:`, error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: 'There was an error executing this command!',
-                    ephemeral: true
-                });
-            } else {
-                await interaction.followUp({
-                    content: 'There was an error executing this command!',
-                    ephemeral: true
-                });
-            }
+            console.error(`Error executing ${interaction.commandName}:`);
+            console.error(error);
+            await interaction.reply({
+                content: 'There was an error executing this command!',
+                ephemeral: true
+            }).catch(error => console.error('Failed to send error message:', error));
         }
     }
 
     if (interaction.isButton()) {
-        const [action] = interaction.customId.split('_');
-
-        // Skip role check for joining the lottery
-        if (action === 'join') {
-            const buttonHandler = require('./utils/buttonHandlers');
-            try {
-                // Defer the reply to avoid the "Unknown interaction" error
-                await interaction.deferReply({ ephemeral: true });
-
-                console.log(`Processing button interaction: ${interaction.customId}`);
-                await buttonHandler.handleButton(interaction);
-                console.log(`Successfully processed button: ${interaction.customId}`);
-            } catch (error) {
-                console.error('Button interaction error:', error);
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
-                        content: 'There was an error processing this button!',
-                        ephemeral: true
-                    });
-                } else {
-                    await interaction.followUp({
-                        content: 'There was an error processing this button!',
-                        ephemeral: true
-                    });
-                }
-            }
+        // Check if user has at least participant role for button interactions
+        if (!permissionChecker.hasPermission(interaction.member, 'hlp')) {
+            await interaction.reply({
+                content: 'You need at least participant role to interact with the lottery.',
+                ephemeral: true
+            });
             return;
         }
 
-        // For other button interactions, handle them as usual
         const buttonHandler = require('./utils/buttonHandlers');
         try {
-            // Defer the reply to avoid the "Unknown interaction" error
-            await interaction.deferReply({ ephemeral: true });
-
             console.log(`Processing button interaction: ${interaction.customId}`);
             await buttonHandler.handleButton(interaction);
             console.log(`Successfully processed button: ${interaction.customId}`);
         } catch (error) {
             console.error('Button interaction error:', error);
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: 'There was an error processing this button!',
-                    ephemeral: true
-                });
-            } else {
-                await interaction.followUp({
-                    content: 'There was an error processing this button!',
-                    ephemeral: true
-                });
-            }
+            await interaction.reply({
+                content: 'There was an error processing this button!',
+                ephemeral: true
+            }).catch(error => console.error('Failed to send error message:', error));
         }
     }
 });
