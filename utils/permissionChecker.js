@@ -7,7 +7,7 @@ class PermissionChecker {
             const dmAllowedCommands = ['hlp', 'skulls'];
             return dmAllowedCommands.includes(command);
         }
-        
+
         // Admin role has access to everything
         if (member.roles.cache.has(config.adminRoleId)) {
             return true;
@@ -16,6 +16,12 @@ class PermissionChecker {
         // Check moderator permissions
         if (member.roles.cache.has(config.moderatorRoleId)) {
             return config.rolePermissions.moderator.includes(command);
+        }
+
+        // Bypass role check for specific commands (e.g., joining the lottery)
+        const bypassRoleCheckCommands = ['join']; // Add commands that don't require a role check
+        if (bypassRoleCheckCommands.includes(command)) {
+            return true; // Assume all users have permission for these commands
         }
 
         // Check participant permissions
