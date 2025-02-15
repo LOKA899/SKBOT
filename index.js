@@ -71,7 +71,8 @@ client.once('ready', () => {
     console.log('Bot is ready to process commands!');
 });
 
-client.on('interactionCreate', async interaction => {
+
+       client.on('interactionCreate', async interaction => {
     if (!interaction.isCommand() && !interaction.isButton()) return;
 
     if (interaction.isCommand()) {
@@ -96,10 +97,17 @@ client.on('interactionCreate', async interaction => {
         } catch (error) {
             console.error(`Error executing ${interaction.commandName}:`);
             console.error(error);
-            await interaction.reply({
-                content: 'There was an error executing this command!',
-                ephemeral: true
-            }).catch(error => console.error('Failed to send error message:', error));
+            if (!interaction.deferred && !interaction.replied) {
+                await interaction.reply({
+                    content: 'There was an error executing this command!',
+                    ephemeral: true
+                }).catch(console.error);
+            } else {
+                await interaction.followUp({
+                    content: 'There was an error executing this command!',
+                    ephemeral: true
+                }).catch(console.error);
+            }
         }
     }
 
