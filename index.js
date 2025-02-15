@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config.js');
 const permissionChecker = require('./utils/permissionChecker');
+const http = require('http'); // Import the http module
 
 const client = new Client({
     intents: [
@@ -107,6 +108,17 @@ process.on('uncaughtException', error => {
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
+
+// HTTP server to keep bot alive on hosting platforms like Render
+http
+  .createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running\n');
+  })
+  .listen(process.env.PORT || 3000)
+  .on('error', (error) => {
+    console.error('HTTP server error:', error);
+  });
 
 client.login(config.token).catch(error => {
     console.error('Failed to login:', error);
