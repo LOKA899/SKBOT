@@ -7,7 +7,7 @@ class PermissionChecker {
             const dmAllowedCommands = ['hlp', 'skulls'];
             return dmAllowedCommands.includes(command);
         }
-        
+
         // Admin role has access to everything
         if (member.roles.cache.has(config.adminRoleId)) {
             return true;
@@ -18,8 +18,8 @@ class PermissionChecker {
             return config.rolePermissions.moderator.includes(command);
         }
 
-        // Check participant permissions
-        if (member.roles.cache.has(config.participantRoleId)) {
+        // Skip participant role check if participantRoleId is null
+        if (config.participantRoleId && member.roles.cache.has(config.participantRoleId)) {
             return config.rolePermissions.participant.includes(command);
         }
 
@@ -29,7 +29,7 @@ class PermissionChecker {
     static getHighestRole(member) {
         if (member.roles.cache.has(config.adminRoleId)) return 'admin';
         if (member.roles.cache.has(config.moderatorRoleId)) return 'moderator';
-        if (member.roles.cache.has(config.participantRoleId)) return 'participant';
+        if (config.participantRoleId && member.roles.cache.has(config.participantRoleId)) return 'participant';
         return 'none';
     }
 
