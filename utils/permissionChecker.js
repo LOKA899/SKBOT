@@ -1,20 +1,37 @@
+
 const config = require('../config');
 
-function hasPermission(member, command) {
-    if (command === 'sd' || command === 'raffle') {
-        return member.roles.cache.has(config.moderatorRoleId);
+class PermissionChecker {
+    static hasPermission(member, command) {
+        // If no member object (DM), only allow certain commands
+        if (!member || !member.roles) {
+            const dmAllowedCommands = ['hlp', 'skulls'];
+            return dmAllowedCommands.includes(command);
+        }
+        
+        // Admin role has access to everything
+        if (member.roles.cache.has(config.adminRoleId)) {
+            return true;
+        }
+
+        // Check moderator permissions for lottery creation
+        if (['sd', 'rsd', 'cnl', 'rm', 'draw'].includes(command)) {
+            return member.roles.cache.has(config.moderatorRoleId);
+        }
+
+        // Allow everyone to use other commands
+        return true;
     }
-    return true; // Allow everyone to use other commands
+
+    static getHighestRole(member) {
+        if (member.roles.cache.has(config.adminRoleId)) return 'admin';
+        if (member.roles.cache.has(config.moderatorRoleId)) return 'moderator';
+        return 'none';
+    }
+
+    static getMissingPermissionMessage(command) {
+        return `You need Moderator or Admin role to use the \`${command}\` command.`;
+    }
 }
 
-function getMissingPermissionMessage(command) {
-    if (command === 'sd' || command === 'raffle') {
-        return 'You need the Moderator role to use this command!';
-    }
-    return 'You do not have permission to use this command!';
-}
-
-module.exports = {
-    hasPermission,
-    getMissingPermissionMessage
-};
+module.exports = PermissionChecker;
