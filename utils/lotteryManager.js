@@ -40,7 +40,7 @@ class LotteryManager {
             prize: options.prize,
             winners: options.winners,
             minParticipants: options.minParticipants || 1,
-            terms: options.terms || "Winner must have an active C61 account, or a redraw occurs!"
+            terms: options.terms || "Winner must have an active C61 account, or a redraw occurs!",
             startTime: Date.now(),
             endTime: Date.now() + options.duration,
             participants: new Map(), // Changed to Map to store ticket counts
