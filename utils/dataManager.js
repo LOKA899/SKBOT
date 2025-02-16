@@ -30,76 +30,50 @@ class DataManager {
     setupGitConfig() {
         const gitUrl = `https://${process.env.GITHUB_USERNAME}:${process.env.GITHUB_TOKEN}@github.com/${process.env.GITHUB_REPO}.git`;
 
-        // Initialize Git if not already initialized
-        exec('git init', (initError) => {
-            if (initError) {
-                console.error('Error initializing Git:', initError);
+        // Set Git user name and email
+        exec(`git config --global user.email "${process.env.GIT_EMAIL}"`, (emailError) => {
+            if (emailError) {
+                console.error('Error setting Git email:', emailError);
                 return;
             }
-            console.log('Git initialized successfully.');
+            console.log('Git email set successfully.');
 
-            // Check if the remote 'origin' already exists
-            exec('git remote -v', (remoteCheckError, stdout) => {
-                if (remoteCheckError) {
-                    console.error('Error checking Git remotes:', remoteCheckError);
+            exec(`git config --global user.name "${process.env.GIT_NAME}"`, (nameError) => {
+                if (nameError) {
+                    console.error('Error setting Git name:', nameError);
                     return;
                 }
+                console.log('Git name set successfully.');
 
-                if (stdout.includes('origin')) {
-                    // If 'origin' exists, update its URL
-                    exec(`git remote set-url origin ${gitUrl}`, (remoteSetError) => {
-                        if (remoteSetError) {
-                            console.error('Error setting Git remote URL:', remoteSetError);
+                // Initialize Git if not already initialized
+                exec('git init', (initError) => {
+                    if (initError) {
+                        console.error('Error initializing Git:', initError);
+                        return;
+                    }
+                    console.log('Git initialized successfully.');
+
+                    // Check if the remote 'origin' already exists
+                    exec('git remote -v', (remoteCheckError, stdout) => {
+                        if (remoteCheckError) {
+                            console.error('Error checking Git remotes:', remoteCheckError);
                             return;
                         }
-                        console.log('Git remote URL updated successfully.');
-                    });
-                } else {
-                    // If 'origin' does not exist, add it
-                    exec(`git remote add origin ${gitUrl}`, (remoteAddError) => {
-                        if (remoteAddError) {
-                            console.error('Error adding Git remote:', remoteAddError);
-                            return;
-                        }
-                        console.log('Git remote added successfully.');
-                    });
-                }
-            });
-        });
-    }
 
-    setupAutoPush() {
-        // Push data every hour
-        setInterval(() => {
-            this.pushToGitHub();
-        }, 60 * 60 * 1000); // 1 hour in milliseconds
-    }
-
-    async pushToGitHub() {
-        try {
-            // Ensure the data directory is tracked by Git
-            await this.executeCommand('git add data/*');
-            await this.executeCommand('git commit -m "Auto-save data backup"');
-            await this.executeCommand('git push origin main');
-            console.log('Data successfully pushed to GitHub.');
-        } catch (error) {
-            console.error('Error pushing data to GitHub:', error);
-        }
-    }
-
-    executeCommand(command) {
-        return new Promise((resolve, reject) => {
-            exec(command, (error, stdout, stderr) => {
-                if (error) {
-                    console.error(`Error executing ${command}:`, stderr);
-                    reject(stderr);
-                } else {
-                    console.log(`${command} executed successfully:`, stdout);
-                    resolve(stdout);
-                }
-            });
-        });
-    }
-}
-
-module.exports = new DataManager();
+                        if (stdout.includes('origin')) {
+                            // If 'origin' exists, update its URL
+                            exec(`git remote set-url origin ${gitUrl}`, (remoteSetError) => {
+                                if (remoteSetError) {
+                                    console.error('Error setting Git remote URL:', remoteSetError);
+                                    return;
+                                }
+                                console.log('Git remote URL updated successfully.');
+                            });
+                        } else {
+                            // If 'origin' does not exist, add it
+                            exec(`git remote add origin ${gitUrl}`, (remoteAddError) => {
+                                if (remoteAddError) {
+                                    console.error('Error adding Git remote:', remoteAddError);
+                                    return;
+                                }
+                                console.log('Git remote
