@@ -1,3 +1,4 @@
+
 const { Collection } = require('discord.js');
 const dataManager = require('./dataManager');
 
@@ -6,8 +7,11 @@ class SkullManager {
         this.userBalances = new Collection();
         this.loadData();
         
-        // Save data every 5 minutes
-        setInterval(() => this.saveData(), 5 * 60 * 1000);
+        // Save data every 2 minutes
+        setInterval(() => this.saveData(), 2 * 60 * 1000);
+        
+        // Restore data on startup
+        this.restoreData();
     }
 
     loadData() {
@@ -19,9 +23,20 @@ class SkullManager {
         }
     }
 
+    async restoreData() {
+        try {
+            await dataManager.pullFromGitHub();
+            this.loadData();
+            console.log('✅ Skull data restored from GitHub');
+        } catch (error) {
+            console.error('❌ Failed to restore skull data:', error);
+        }
+    }
+
     saveData() {
         const data = Object.fromEntries(this.userBalances);
         dataManager.saveData('skulls.json', data);
+        dataManager.saveLocalBackup(); // Immediate backup
     }
 
     getBalance(userId) {
