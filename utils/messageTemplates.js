@@ -85,11 +85,11 @@ module.exports = {
                 isActive ? '🎟️ Join now for a chance to win!' : 'This lottery has ended.'
             }${isActive ? `\n\n${timeProgress}` : ''}`)
             .addFields(
-                { name: '🎁 Prize', value: lottery.prize, inline: true },
-                { name: `👥 Winners (${lottery.winners})`, value: participantStatus, inline: true },
-                { name: '⏰ Time', value: timeDisplay, inline: true },
+                { name: '🎁 Prize', value: lottery.prize || 'No prize specified', inline: true },
+                { name: `👥 Winners (${lottery.winners || 0})`, value: participantStatus || 'No participants', inline: true },
+                { name: '⏰ Time', value: timeDisplay || 'Not set', inline: true },
                 { name: '🎫 Ticket Info', value: lottery.ticketPrice > 0 ? `Price: ${lottery.ticketPrice} skulls\nMax per user: ${lottery.maxTicketsPerUser}` : 'Free entry' },
-                { name: '📝 Terms', value: lottery.terms || 'No specific terms' },
+                { name: '📝 Terms', value: lottery.terms || 'Winner must have an active C61 account, or a redraw occurs!' },
                 { name: '🎯 Requirements', value: lottery.minParticipants ? 
                     `Minimum ${lottery.minParticipants} participants required` : 'No minimum participants required' }
             )

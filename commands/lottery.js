@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const lotteryManager = require('../utils/lotteryManager');
+const { lotteryManager } = require('../utils/lotteryManager');
 const messageTemplates = require('../utils/messageTemplates');
 const permissionChecker = require('../utils/permissionChecker');
 const config = require('../config');
@@ -96,7 +96,8 @@ module.exports = {
                 return;
             }
 
-            const lottery = lotteryManager.createLottery({
+            const lottery = await lotteryManager.createLottery({
+                interaction,
                 prize: interaction.options.getString('prize'),
                 winners,
                 minParticipants,
@@ -153,17 +154,21 @@ module.exports = {
                 console.error('Error replying with lottery settings:', error);
             }
 
-            lottery.channelId = interaction.channelId;
+            lottery.channelid = interaction.channelId;
             lottery.guildId = interaction.guildId;
 
         } catch (error) {
             console.error('Error in lottery command:', error);
             try {
-                if (!interaction.deferred && !interaction.replied) {
-                    await interaction.reply({
-                        content: 'An error occurred while creating the lottery. Please try again.',
-                        ephemeral: true
-                    });
+                const response = {
+                    content: 'An error occurred while creating the lottery. Please try again.',
+                    ephemeral: true
+                };
+                
+                if (interaction.deferred) {
+                    await interaction.editReply(response);
+                } else if (!interaction.replied) {
+                    await interaction.reply(response);
                 }
             } catch (error) {
                 console.error('Failed to send error message:', error);
