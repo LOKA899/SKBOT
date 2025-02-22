@@ -50,7 +50,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.customId.startsWith('wallet_submit_')) {
             const [, , lotteryId, walletType] = interaction.customId.split('_');
             const walletAddress = interaction.fields.getTextInputValue('wallet_address');
-            
+
             // Get the lottery information
             const lottery = lotteryManager.getLottery(lotteryId);
             if (!lottery) {
@@ -61,7 +61,7 @@ client.on('interactionCreate', async interaction => {
             try {
                 // Fetch the creator of the lottery
                 const creator = await interaction.client.users.fetch(lottery.createdBy);
-                
+
                 const adminEmbed = new EmbedBuilder()
                     .setTitle('🏦 Wallet Address Submitted')
                     .setColor('#00FF00')
@@ -85,7 +85,7 @@ client.on('interactionCreate', async interaction => {
                 const replyContent = notificationSent 
                     ? 'Your wallet address has been submitted successfully and the lottery creator has been notified!'
                     : 'Your wallet address has been submitted successfully, but we could not notify the lottery creator. Please contact them directly.';
-                
+
                 await interaction.reply({ content: replyContent, ephemeral: true });
             } catch (error) {
                 console.error('Failed to process wallet submission:', error);
@@ -182,7 +182,7 @@ client.on("interactionCreate", async (interaction) => {
 // Reaction handler for translations
 client.on('messageReactionAdd', async (reaction, user) => {
     if (user.bot) return;
-    
+
     try {
         // Fetch partial messages/reactions if needed
         if (reaction.partial) await reaction.fetch();
@@ -201,7 +201,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
             }
 
             const translatedText = await languageManager.translateMessage(reaction.message.content, targetLang);
-            
+
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle('Translation')

@@ -31,8 +31,8 @@ module.exports = {
             return;
         }
 
-        if (lottery.status !== 'active') {
-            await interaction.reply({ content: 'This lottery is not active!', ephemeral: true });
+        if (lottery.status !== 'active' && !(lottery.isManualDraw && lottery.status === 'expired')) {
+            await interaction.reply({ content: 'This lottery is not active or is not in manual draw mode!', ephemeral: true });
             return;
         }
 

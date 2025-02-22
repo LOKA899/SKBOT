@@ -1,6 +1,7 @@
 const supabase = require('./supabaseClient');
 const messageTemplates = require('./messageTemplates');
 const { updateLotteryMessage } = require('./messageUpdater');
+const { setTimeout, clearTimeout, setInterval, clearInterval } = require('timers');
 
 class LotteryManager {
     constructor() {
@@ -16,8 +17,28 @@ class LotteryManager {
     }
 
     // Get a lottery by ID
-    getLottery(lotteryId) {
-        return this.lotteries.get(lotteryId);
+    async getLottery(lotteryId) {
+        // First check in memory
+        const memoryLottery = this.lotteries.get(lotteryId);
+        if (memoryLottery) return memoryLottery;
+
+        // If not in memory, check database
+        try {
+            const { data, error } = await supabase
+                .from("lotteries")
+                .select("*")
+                .eq("id", lotteryId)
+                .single();
+
+            if (error || !data) return null;
+
+            // Convert participants to Map
+            data.participants = new Map(Object.entries(data.participants || {}));
+            return data;
+        } catch (error) {
+            console.error("Error fetching lottery:", error);
+            return null;
+        }
     }
 
     getParticipantTickets(lotteryId, userId) {
@@ -200,13 +221,37 @@ class LotteryManager {
             clearInterval(this.updateIntervals.get(lottery.id));
         }
 
+        console.log(`[MessageUpdater] Starting update interval for lottery ${lottery.id}`);
+        if (!lottery.messageId) {
+            console.error(`[MessageUpdater] No messageId found for lottery ${lottery.id}`);
+            return;
+        }
         const updateFunc = async () => {
             try {
                 const channel = await this.client.channels.fetch(lottery.channelid);
-                await updateLotteryMessage(channel, lottery.messageId, lottery);
+                if (!channel) {
+                    console.error(`[MessageUpdater] Channel not found for lottery ${lottery.id}`);
+                    return;
+                }
+                
+                // Always attempt to update the message
+                const { updateLotteryMessage } = require('./messageUpdater');
+                await updateLotteryMessage(channel, lottery.messageId, lottery, lottery.status === 'active');
+                
+                // Then check if we need to stop updates
+                if (lottery.status === 'ended' || lottery.status === 'expired' || lottery.status === 'cancelled') {
+                    console.log(`[MessageUpdater] Stopping updates for ${lottery.id} (${lottery.status})`);
+                    if (this.updateIntervals.has(lottery.id)) {
+                        clearInterval(this.updateIntervals.get(lottery.id));
+                        this.updateIntervals.delete(lottery.id);
+                    }
+                }
             } catch (error) {
-                console.error(`Failed to update message for lottery ${lottery.id}:`, error);
-                clearInterval(this.updateIntervals.get(lottery.id));
+                console.error(`[MessageUpdater] Failed to update message for lottery ${lottery.id}:`, error);
+                if (this.updateIntervals.has(lottery.id)) {
+                    clearInterval(this.updateIntervals.get(lottery.id));
+                    this.updateIntervals.delete(lottery.id);
+                }
             }
         };
 
@@ -230,9 +275,8 @@ class LotteryManager {
         if (!lottery || lottery.status !== "active") return;
 
         try {
-            // Clear timers and intervals
+            // Clear timer but keep interval running until we're done
             clearTimeout(this.timers.get(lotteryId));
-            clearInterval(this.updateIntervals.get(lotteryId));
 
             // For manual draw lotteries, just update the message to show expired status
             if (lottery.isManualDraw) {
@@ -265,9 +309,20 @@ class LotteryManager {
             }
 
             await this.updateStatus(lotteryId, "ended");
+
+            // Clear interval only after all updates are done
+            if (this.updateIntervals.has(lotteryId)) {
+                clearInterval(this.updateIntervals.get(lotteryId));
+                this.updateIntervals.delete(lotteryId);
+            }
         } catch (error) {
             console.error(`Error ending lottery ${lotteryId}:`, error);
             await this.updateStatus(lotteryId, "ended");
+
+            if (this.updateIntervals.has(lotteryId)) {
+                clearInterval(this.updateIntervals.get(lotteryId));
+                this.updateIntervals.delete(lotteryId);
+            }
         }
     }
 
@@ -419,13 +474,15 @@ class LotteryManager {
                         // Store in memory
                         this.lotteries.set(lotteryData.id, lotteryData);
 
-                        if (shouldBeActive) {
-                            // Calculate remaining time
-                            const remainingTime = lotteryData.endTime - now;
-
-                            // Restart timers
-                            this.setTimer(lotteryData.id, remainingTime);
+                        // Start message updater for both active and expired manual draw lotteries
+                        if (shouldBeActive || (lotteryData.isManualDraw && lotteryData.status === "expired")) {
                             this.startUpdateInterval(lotteryData);
+                        }
+
+                        // Set timer only for active non-manual lotteries
+                        if (shouldBeActive && !lotteryData.isManualDraw) {
+                            const remainingTime = lotteryData.endTime - now;
+                            this.setTimer(lotteryData.id, remainingTime);
                         }
 
                         restoredLotteries.push(lotteryData);

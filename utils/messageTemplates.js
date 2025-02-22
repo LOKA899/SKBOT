@@ -45,13 +45,12 @@ function getTimeColor(percentage) {
 
 module.exports = {
     createLotteryEmbed(lottery) {
-        const isActive = lottery.status === 'active';
-        const statusEmoji = {
-            'active': '🟢 LIVE',
-            'ended': '🔴 ENDED',
-            'cancelled': '⚫ CANCELLED',
-            'pending': '⏳ PENDING'
-        }[lottery.status];
+        const now = Date.now();
+        const isEnded = lottery.status === 'ended' || lottery.status === 'cancelled' || lottery.status === 'expired';
+        const timeLeft = lottery.endTime - now;
+        const status = lottery.status === 'active' ? '🟢 LIVE' : 
+                      lottery.status === 'expired' ? '⏰ EXPIRED' :
+                      lottery.status === 'cancelled' ? '🚫 CANCELLED' : '✅ ENDED';
 
         const participantCount = lottery.participants ? lottery.participants.size : 0;
         const totalTickets = lottery.totalTickets || 0;
@@ -63,7 +62,7 @@ module.exports = {
         let timeProgress = '';
         let embedColor = '#808080';
 
-        if (isActive) {
+        if (!isEnded) {
             const remainingMs = Math.max(0, lottery.endTime - Date.now());
             const totalDuration = lottery.endTime - lottery.startTime;
             const percentage = remainingMs / totalDuration;
@@ -79,11 +78,11 @@ module.exports = {
         }
 
         const embed = new EmbedBuilder()
-            .setTitle(`${isActive ? '🎉 Live SoulDraw!' : '🏁 SoulDraw Ended'} ${statusEmoji}`)
+            .setTitle(`${!isEnded ? '🎉 Live SoulDraw!' : '🏁 SoulDraw Ended'} ${status}`)
             .setColor(embedColor)
             .setDescription(`**Lottery ID: \`${lottery.id}\`**\n${
-                isActive ? '🎟️ Join now for a chance to win!' : 'This lottery has ended.'
-            }${isActive ? `\n\n${timeProgress}` : ''}`)
+                !isEnded ? '🎟️ Join now for a chance to win!' : 'This lottery has ended.'
+            }${!isEnded ? `\n\n${timeProgress}` : ''}`)
             .addFields(
                 { name: '🎁 Prize', value: lottery.prize || 'No prize specified', inline: true },
                 { name: `👥 Winners (${lottery.winners || 0})`, value: participantStatus || 'No participants', inline: true },
@@ -93,7 +92,7 @@ module.exports = {
                 { name: '🎯 Requirements', value: lottery.minParticipants ? 
                     `Minimum ${lottery.minParticipants} participants required` : 'No minimum participants required' }
             )
-            .setFooter({ text: `ID: ${lottery.id} • ${lottery.isManualDraw ? 'Manual Draw' : 'Auto Draw'} • ${statusEmoji}` })
+            .setFooter({ text: `ID: ${lottery.id} • ${lottery.isManualDraw ? 'Manual Draw' : 'Auto Draw'} • ${status}` })
             .setTimestamp();
 
         return embed;

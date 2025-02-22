@@ -1,4 +1,3 @@
-
 const supabase = require('./supabaseClient');
 
 class SkullManager {
@@ -11,7 +10,7 @@ class SkullManager {
                 .select('balance')
                 .eq('user_id', userId)
                 .single();
-                
+
             if (error) throw error;
             return data?.balance || 0;
         } catch (error) {
@@ -22,21 +21,16 @@ class SkullManager {
 
     async addSkulls(userId, amount) {
         try {
+            const currentBalance = await this.getBalance(userId);
             const { data, error } = await supabase
                 .from('skulls')
                 .upsert({ 
                     user_id: userId, 
-                    balance: amount 
-                }, { 
-                    onConflict: 'user_id',
-                    target: ['user_id'],
-                    update: {
-                        balance: supabase.raw(`skulls.balance + ${amount}`)
-                    }
+                    balance: currentBalance + amount 
                 })
                 .select()
                 .single();
-                
+
             if (error) throw error;
             return data.balance;
         } catch (error) {
@@ -51,12 +45,12 @@ class SkullManager {
             if (currentBalance < amount) {
                 return false;
             }
-            
+
             const { error } = await supabase
                 .from('skulls')
                 .update({ balance: currentBalance - amount })
                 .eq('user_id', userId);
-                
+
             if (error) throw error;
             return true;
         } catch (error) {
