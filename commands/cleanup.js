@@ -1,32 +1,47 @@
 
 const { SlashCommandBuilder } = require('@discordjs/builders');
-const { cleanupBotMessages } = require('../utils/messageUpdater');
-const permissionChecker = require('../utils/permissionChecker');
+const { PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('cleanup')
-        .setDescription('Clean up old bot messages')
+        .setDescription('Clean up bot messages older than specified hours')
         .addIntegerOption(option =>
-            option.setName('minutes')
-                .setDescription('Delete messages older than X minutes')
-                .setRequired(false)),
+            option.setName('hours')
+                .setDescription('Delete messages older than this many hours')
+                .setRequired(true)
+                .setMinValue(1)
+                .setMaxValue(720))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
     async execute(interaction) {
-        if (!permissionChecker.hasPermission(interaction.member, 'admin')) {
-            await interaction.reply({
-                content: 'You need admin permission to use this command.',
-                ephemeral: true
-            });
-            return;
-        }
+        const hours = interaction.options.getInteger('hours');
+        const channel = interaction.channel;
+        const clientId = interaction.client.user.id;
 
-        const minutes = interaction.options.getInteger('minutes') || 60;
-        await cleanupBotMessages(interaction.channel, minutes);
-        
-        await interaction.reply({
-            content: `Cleaned up bot messages older than ${minutes} minutes.`,
-            ephemeral: true
-        });
-    }
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            let deleted = 0;
+            const messages = await channel.messages.fetch({ limit: 100 });
+            const timeThreshold = Date.now() - (hours * 3600000);
+
+            const botMessages = messages.filter(msg => 
+                msg.author.id === clientId && 
+                msg.createdTimestamp < timeThreshold
+            );
+
+            if (botMessages.size === 0) {
+                await interaction.editReply(`No bot messages found older than ${hours} hours.`);
+                return;
+            }
+
+            await channel.bulkDelete(botMessages);
+            await interaction.editReply(`Successfully deleted ${botMessages.size} bot messages older than ${hours} hours.`);
+
+        } catch (error) {
+            console.error('Error cleaning up messages:', error);
+            await interaction.editReply('An error occurred while cleaning up messages.');
+        }
+    },
 };

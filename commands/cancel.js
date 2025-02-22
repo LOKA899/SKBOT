@@ -19,7 +19,7 @@ module.exports = {
         }
 
         const lotteryId = interaction.options.getString('lottery_id');
-        const lottery = await lotteryManager.getLottery(lotteryId);
+        const lottery = lotteryManager.getLottery(lotteryId);
 
         if (!lottery || (lottery.status !== "active" && lottery.status !== "expired")) {
             await interaction.reply({ content: 'Lottery not found or cannot be cancelled!', ephemeral: true });
