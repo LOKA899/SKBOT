@@ -25,9 +25,9 @@ module.exports = {
         .setDescription('The type of node (RSS, Crystal Mine, or DSA)')
         .setRequired(true)
         .addChoices(
-          { name: 'RSS', value: 'rss' },
+          { name: 'Farm', value: 'farm' },
           { name: 'Crystal Mine', value: 'crystalMine' },
-          { name: 'DSA', value: 'dsa' }
+          { name: 'Sealed Mine', value: 'sealedMine' }
         ))
     .addIntegerOption(option =>
       option.setName('level')
@@ -77,9 +77,7 @@ module.exports = {
           return;
         }
 
-        console.log(`[RSS Command] Looking up node type: ${nodeType}, level: ${level}`);
-        console.log(`[RSS Command] Available node types:`, Object.keys(nodeLevels));
-        const nodeData = nodeLevels[nodeType]?.find(node => node.level === level);
+        const nodeData = nodeLevels[nodeType].find(node => node.level === level);
         if (!nodeData) {
           await interaction.editReply({ content: 'Invalid node type or level.' });
           return;
