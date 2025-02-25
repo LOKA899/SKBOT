@@ -60,15 +60,11 @@ module.exports = {
       const landId = interaction.options.getString('land_id');
       const fromDate = interaction.options.getString('from_date');
       const toDate = interaction.options.getString('to_date');
-      console.log(`[RSS Command] Parameters: Land ID: ${landId}, From: ${fromDate}, To: ${toDate}`);
       const nodeType = interaction.options.getString('node_type');
       const level = interaction.options.getInteger('level');
 
       try {
-        console.log(`[RSS Command] Fetching contributions for Land ${landId}`);
         const response = await fetchLandContributions(landId, fromDate, toDate);
-        console.log(`[RSS Command] API Response received: ${response ? 'Success' : 'Failed'}`);
-        console.log(`[RSS Command] Response data:`, JSON.stringify(response, null, 2));
         if (!response || !response.contribution) {
           await interaction.editReply({ content: 'Failed to fetch contributions. Please check the Land ID and date range.' });
           return;
