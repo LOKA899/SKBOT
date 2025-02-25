@@ -25,9 +25,9 @@ module.exports = {
         .setDescription('The type of node (RSS, Crystal Mine, or DSA)')
         .setRequired(true)
         .addChoices(
-          { name: 'Farm', value: 'farm' },
-          { name: 'Crystal Mine', value: 'crystalMine' },
-          { name: 'Sealed Mine', value: 'sealedMine' }
+          { name: 'RSS', value: 'RSS' },
+          { name: 'Crystal Mine', value: 'CrystalMine' },
+          { name: 'DSA', value: 'DSA' }
         ))
     .addIntegerOption(option =>
       option.setName('level')
