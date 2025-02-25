@@ -60,7 +60,7 @@ module.exports = {
       const landId = interaction.options.getString('land_id');
       const fromDate = interaction.options.getString('from_date');
       const toDate = interaction.options.getString('to_date');
-      const nodeType = interaction.options.getString('node_type');
+      const nodeType = interaction.options.getString('node_type').toUpperCase();
       const level = interaction.options.getInteger('level');
 
       try {
