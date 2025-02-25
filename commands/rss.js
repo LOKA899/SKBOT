@@ -53,8 +53,10 @@ module.exports = {
 
   async execute(interaction) {
     try {
-      await interaction.deferReply({ ephemeral: true });
       console.log(`[RSS Command] Command received from user ${interaction.user.tag} (${interaction.user.id})`);
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true }).catch(console.error);
+      }
       const landId = interaction.options.getString('land_id');
       const fromDate = interaction.options.getString('from_date');
       const toDate = interaction.options.getString('to_date');
@@ -194,7 +196,14 @@ module.exports = {
         }
       }
     } catch (error) {
-      console.error("Error in main try/catch", error)
+      console.error("Error in main try/catch", error);
+      if (!interaction.replied && !interaction.deferred) {
+        try {
+          await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
+        } catch (replyError) {
+          console.error('Failed to send error response:', replyError);
+        }
+      }
     }
   }
 };
