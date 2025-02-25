@@ -72,20 +72,21 @@ module.exports = {
           return;
         }
 
-        const filteredContributions = response.contribution.filter(contribution => contribution.continent === 61);
-        if (filteredContributions.length === 0) {
+        if (!response.contribution || response.contribution.length === 0) {
           await interaction.editReply({ content: 'No contributions found for Continent 61.' });
           return;
         }
 
-        const nodeData = nodeLevels[nodeType].find(node => node.level === level);
+        console.log(`[RSS Command] Looking up node type: ${nodeType}, level: ${level}`);
+        console.log(`[RSS Command] Available node types:`, Object.keys(nodeLevels));
+        const nodeData = nodeLevels[nodeType]?.find(node => node.level === level);
         if (!nodeData) {
           await interaction.editReply({ content: 'Invalid node type or level.' });
           return;
         }
 
         const expectedDevPoints = nodeData.expectedDevPoints;
-        const offenders = filteredContributions
+        const offenders = response.contribution
           .map(contribution => ({
             player: contribution.name,
             totalDevPoints: contribution.total,
