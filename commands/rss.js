@@ -75,9 +75,14 @@ module.exports = {
           return;
         }
 
+        if (!nodeLevels[nodeType]) {
+          await interaction.editReply({ content: `Invalid node type: ${nodeType}. Available types are: RSS, CrystalMine, DSA` });
+          return;
+        }
+
         const nodeData = nodeLevels[nodeType].find(node => node.level === level);
         if (!nodeData) {
-          await interaction.editReply({ content: 'Invalid node type or level.' });
+          await interaction.editReply({ content: `Invalid level ${level} for node type ${nodeType}` });
           return;
         }
 
