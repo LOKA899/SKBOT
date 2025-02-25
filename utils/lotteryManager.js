@@ -269,11 +269,11 @@ class LotteryManager {
 
     calculateUpdateFrequency(endTime) {
         const remaining = endTime - Date.now();
-        if (remaining <= -300000) return 30000; // Over 5 mins expired: 30s updates
-        if (remaining <= 0) return 5000; // Recently expired: 5s updates
-        if (remaining <= 60000) return 5000; // Last minute: 5s updates
-        if (remaining <= 300000) return 15000; // Last 5 minutes: 15s
-        return 30000; // Default: 30s
+        if (remaining <= 0) return 5000; // Expired: 5s updates
+        if (remaining <= 60000) return 1000; // Last minute: 1s updates
+        if (remaining <= 300000) return 5000; // Last 5 minutes: 5s updates
+        if (remaining <= 1800000) return 15000; // Last 30 minutes: 15s updates
+        return 30000; // Default: 30s updates
     }
 
     startExpirationCheck(lottery) {
@@ -372,6 +372,11 @@ class LotteryManager {
             if (lottery.participants.size >= lottery.minParticipants) {
                 const winners = await this.drawWinners(lotteryId);
                 if (winners && winners.length > 0) {
+                    await this.updateStatus(lotteryId, "ended");
+                    const channel = await this.client.channels.fetch(lottery.channelid);
+                    if (channel) {
+                        await updateLotteryMessage(channel, lottery.messageId, lottery, false);
+                    }
                     await this.announceWinners(lottery, winners);
                 } else {
                     await this.handleFailedLottery(lottery);
@@ -380,7 +385,12 @@ class LotteryManager {
                 await this.handleFailedLottery(lottery);
             }
 
+            // Final status update
             await this.updateStatus(lotteryId, "ended");
+            const channel = await this.client.channels.fetch(lottery.channelid);
+            if (channel) {
+                await updateLotteryMessage(channel, lottery.messageId, lottery, false);
+            }
 
             if (this.updateIntervals.has(lotteryId)) {
                 clearInterval(this.updateIntervals.get(lotteryId));

@@ -25,16 +25,37 @@ async function updateLotteryMessage(channel, messageId, lottery, includeButtons 
             components.push(createActionRow(lottery.id));
         }
 
-        if (lottery.status === 'expired' && lottery.isManualDraw) {
+        if (lottery.status === 'ended' || lottery.status === 'cancelled' || 
+            (lottery.status === 'expired' && lottery.isManualDraw)) {
             components.length = 0;
         }
 
-        await message.edit({
-            embeds: [updatedEmbed],
-            components: components
-        });
+        const currentTime = Date.now();
+        const lastEditTime = message.editedTimestamp || message.createdTimestamp;
+        const timeSinceLastEdit = currentTime - lastEditTime;
+        
+        if (timeSinceLastEdit >= 1000 || lottery.status !== 'active') {
+            try {
+                await message.edit({
+                    embeds: [updatedEmbed],
+                    components: components,
+                    flags: message.flags
+                });
+            } catch (error) {
+                if (error.code !== 50001 && error.code !== 10008) {
+                    console.error(`[Update] Update failed: ${error}`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await message.edit({
+                        embeds: [updatedEmbed],
+                        components: components,
+                        flags: message.flags
+                    }).catch(retryError => {
+                        console.error(`[Update] Retry failed: ${retryError}`);
+                    });
+                }
+            }
+        }
 
-        console.log(`[Update] Successfully updated message for lottery ${lottery.id}`);
         return true;
     } catch (error) {
         console.error(`[Update] Error updating message for lottery ${lottery.id}:`, error);

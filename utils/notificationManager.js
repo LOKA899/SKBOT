@@ -1,3 +1,4 @@
+
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { lotteryManager } = require("./lotteryManager");
 
@@ -52,6 +53,49 @@ class NotificationManager {
         }
     }
 
+    async sendNewLotteryNotification(channel, lottery, client) {
+        try {
+            const members = await channel.guild.members.fetch();
+            const embed = new EmbedBuilder()
+                .setTitle("🎉 New Lottery Started!")
+                .setColor("#00FF00")
+                .setDescription(`A new lottery has started in ${channel.toString()}!`)
+                .addFields(
+                    { 
+                        name: "🏆 Prize", 
+                        value: lottery.prize, 
+                        inline: true 
+                    },
+                    { 
+                        name: "👥 Winners", 
+                        value: lottery.winners.toString(), 
+                        inline: true 
+                    },
+                    {
+                        name: "⏰ Duration",
+                        value: this.formatTimeRemaining(lottery.endTime - Date.now()),
+                        inline: true
+                    }
+                )
+                .setFooter({ text: `Lottery ID: ${lottery.id}` })
+                .setTimestamp();
+
+            for (const [memberId, member] of members) {
+                try {
+                    if (!member.user.bot) {
+                        await member.send({ embeds: [embed] });
+                    }
+                } catch (error) {
+                    console.warn(`Could not send DM to user ${memberId}:`, error.message);
+                }
+            }
+            return true;
+        } catch (error) {
+            console.error("Failed to send new lottery notifications:", error);
+            return false;
+        }
+    }
+
     async cleanupStuckMessages(channelId, client) {
         try {
             const channel = await client.channels.fetch(channelId);
@@ -82,10 +126,9 @@ class NotificationManager {
     }
 
     async scheduleEndingSoonNotification(lottery, client) {
-        const notificationTime = lottery.endTime - 15 * 60 * 1000; // 15 minutes before end
+        const notificationTime = lottery.endTime - 15 * 60 * 1000;
         const now = Date.now();
 
-        // Clean up any stuck messages first
         await this.cleanupStuckMessages(lottery.channelid, client);
 
         if (notificationTime > now) {
@@ -96,31 +139,23 @@ class NotificationManager {
                         for (const [userId] of lottery.participants) {
                             try {
                                 const user = await client.users.fetch(userId);
-                                const tickets =
-                                    lotteryManager.getParticipantTickets(
-                                        lottery.id,
-                                        userId,
-                                    );
-                                const probability =
-                                    lotteryManager.getWinningProbability(
-                                        lottery.id,
-                                        userId,
-                                    );
+                                const tickets = lotteryManager.getParticipantTickets(
+                                    lottery.id,
+                                    userId,
+                                );
+                                const probability = lotteryManager.getWinningProbability(
+                                    lottery.id,
+                                    userId,
+                                );
 
                                 const timeLeft = lottery.endTime - Date.now();
-                                const urgencyEmoji =
-                                    timeLeft <= 5 * 60 * 1000 ? "⚡" : "⚠️";
-                                const sparkles =
-                                    timeLeft <= 5 * 60 * 1000 ? "✨" : "";
+                                const urgencyEmoji = timeLeft <= 5 * 60 * 1000 ? "⚡" : "⚠️";
+                                const sparkles = timeLeft <= 5 * 60 * 1000 ? "✨" : "";
 
                                 const embed = new EmbedBuilder()
-                                    .setTitle(
-                                        `${urgencyEmoji} Lottery Ending Soon! ${urgencyEmoji}`,
-                                    )
+                                    .setTitle(`${urgencyEmoji} Lottery Ending Soon! ${urgencyEmoji}`)
                                     .setColor("#FFA500")
-                                    .setDescription(
-                                        `${sparkles}The lottery for **${lottery.prize}** is ending in ${this.formatTimeRemaining(timeLeft)}!${sparkles}`,
-                                    )
+                                    .setDescription(`${sparkles}The lottery for **${lottery.prize}** is ending in ${this.formatTimeRemaining(timeLeft)}!${sparkles}`)
                                     .addFields(
                                         {
                                             name: "🎫 Your Tickets",
@@ -167,9 +202,7 @@ class NotificationManager {
             const embed = new EmbedBuilder()
                 .setTitle("🎉 Congratulations! You Won!")
                 .setColor("#FFD700")
-                .setDescription(
-                    `You have won the lottery for **${lottery.prize}**!`,
-                )
+                .setDescription(`You have won the lottery for **${lottery.prize}**!`)
                 .addFields(
                     { name: "🏆 Prize", value: lottery.prize },
                     {

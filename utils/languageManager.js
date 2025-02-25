@@ -1,16 +1,40 @@
+
 const { translate } = require("@vitalets/google-translate-api");
+const supabase = require('./supabaseClient');
 
 class LanguageManager {
-    constructor() {
-        this.preferences = {};
+    constructor() {}
+
+    async setUserPreference(userId, language) {
+        try {
+            const { error } = await supabase
+                .from('language_preferences')
+                .upsert({ 
+                    user_id: userId, 
+                    language: language 
+                });
+
+            if (error) throw error;
+        } catch (error) {
+            console.error('Error setting language preference:', error);
+            throw error;
+        }
     }
 
-    setUserPreference(userId, language) {
-        this.preferences[userId] = language;
-    }
+    async getUserPreference(userId) {
+        try {
+            const { data, error } = await supabase
+                .from('language_preferences')
+                .select('language')
+                .eq('user_id', userId)
+                .single();
 
-    getUserPreference(userId) {
-        return this.preferences[userId] || "en";
+            if (error) throw error;
+            return data?.language || "en";
+        } catch (error) {
+            console.error('Error getting language preference:', error);
+            return "en";
+        }
     }
 
     async translateMessage(text, targetLang) {

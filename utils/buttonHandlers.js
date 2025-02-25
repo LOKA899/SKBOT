@@ -96,6 +96,7 @@ async function handleConfirmLottery(interaction, lotteryId) {
 
     lottery.channelid = interaction.channel.id;
     lottery.messageId = message.id;
+    lottery.channelid = interaction.channel.id;
 
     const { error } = await supabase
         .from("lotteries")
@@ -116,6 +117,7 @@ async function handleConfirmLottery(interaction, lotteryId) {
     }
 
     lottery.status = "active";
+    await lotteryManager.startUpdateInterval(lottery);
 
     await notificationManager.scheduleEndingSoonNotification(lottery, interaction.client);
 
@@ -124,6 +126,12 @@ async function handleConfirmLottery(interaction, lotteryId) {
         embeds: [],
         components: [],
     });
+
+    // Send notifications to all users
+    const channel = await interaction.client.channels.fetch(lottery.channelid);
+    if (channel) {
+        await notificationManager.sendNewLotteryNotification(channel, lottery, interaction.client);
+    }
 
     if (!lottery.isManualDraw) {
         setTimeout(async () => {
