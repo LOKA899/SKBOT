@@ -7,10 +7,11 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('rss')
     .setDescription('Check unfinished resource nodes for a specific land and date range.')
-    .addStringOption(option =>
+    .addIntegerOption(option =>
       option.setName('land_id')
         .setDescription('The Land ID to check')
-        .setRequired(true))
+        .setRequired(true)
+        .setMinValue(1))
     .addStringOption(option =>
       option.setName('from_date')
         .setDescription('The start date')
@@ -62,7 +63,7 @@ module.exports = {
 
   async execute(interaction) {
     await interaction.deferReply({ ephemeral: true });
-    const landId = interaction.options.getString('land_id');
+    const landId = interaction.options.getInteger('land_id');
     const fromDate = interaction.options.getString('from_date');
     const toDate = interaction.options.getString('to_date');
     const nodeType = interaction.options.getString('node_type');
