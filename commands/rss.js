@@ -62,12 +62,13 @@ module.exports = {
   },
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
-    const landId = interaction.options.getInteger('land_id');
-    const fromDate = interaction.options.getString('from_date');
-    const toDate = interaction.options.getString('to_date');
-    const nodeType = interaction.options.getString('node_type');
-    const level = interaction.options.getInteger('level');
+    try {
+      await interaction.deferReply({ ephemeral: true });
+      const landId = interaction.options.getInteger('land_id');
+      const fromDate = interaction.options.getString('from_date');
+      const toDate = interaction.options.getString('to_date');
+      const nodeType = interaction.options.getString('node_type');
+      const level = interaction.options.getInteger('level');
 
     try {
       const response = await fetchLandContributions(landId, fromDate, toDate);
@@ -189,7 +190,18 @@ module.exports = {
         });
       });
     } catch (error) {
-      await interaction.editReply({ content: 'An error occurred while processing the command.', ephemeral: true });
+      console.error('RSS command error:', error);
+      if (error.code === 10062) return; // Ignore unknown interaction errors
+      
+      try {
+        if (interaction.deferred) {
+          await interaction.editReply({ content: 'An error occurred while processing the command.', ephemeral: true });
+        } else if (!interaction.replied) {
+          await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
+        }
+      } catch (e) {
+        console.error('Failed to send error response:', e);
+      }
     }
   }
 };
