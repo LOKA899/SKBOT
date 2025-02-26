@@ -52,156 +52,150 @@ module.exports = {
         date.name.toLowerCase().includes(focusedOption.value.toLowerCase())
       );
 
-      await interaction.respond(
-        filtered.slice(0, 25)
-      );
+      await interaction.respond(filtered.slice(0, 25));
     } catch (error) {
       console.error('Autocomplete error:', error);
-      await interaction.respond([]);
     }
   },
 
   async execute(interaction) {
+    let replied = false;
     try {
       await interaction.deferReply({ ephemeral: true });
+      replied = true;
+
       const landId = interaction.options.getInteger('land_id');
       const fromDate = interaction.options.getString('from_date');
       const toDate = interaction.options.getString('to_date');
       const nodeType = interaction.options.getString('node_type');
       const level = interaction.options.getInteger('level');
 
-      try {
-        const response = await fetchLandContributions(landId, fromDate, toDate);
-        if (!response?.contribution) {
-          await interaction.editReply({ content: 'Failed to fetch contributions. Please check the Land ID and date range.', ephemeral: true });
-          return;
-        }
-
-        const nodeData = nodeLevels[nodeType].find(node => node.level === level);
-        if (!nodeData) {
-          await interaction.editReply({ content: 'Invalid node type or level.' });
-          return;
-        }
-
-        const expectedDevPoints = nodeData.expectedDevPoints;
-        const offenders = response.contribution
-          .filter(contribution => contribution.continent === 61)
-          .reduce((acc, contribution) => {
-            const unfinishedDevPoints = expectedDevPoints - contribution.total;
-            if (unfinishedDevPoints > 0) {
-              acc.push({
-                player: contribution.name,
-                totalDevPoints: contribution.total,
-                unfinishedDevPoints
-              });
-            }
-            return acc;
-          }, [])
-          .sort((a, b) => b.unfinishedDevPoints - a.unfinishedDevPoints);
-
-        if (offenders.length === 0) {
-          await interaction.editReply({ content: 'No unfinished contributions found for Continent 61.', ephemeral: true });
-          return;
-        }
-
-        const pageSize = 5;
-        let currentPage = 0;
-
-        const generateEmbed = (page) => {
-          const startIdx = page * pageSize;
-          const currentOffenders = offenders.slice(startIdx, startIdx + pageSize);
-
-          return new EmbedBuilder()
-            .setTitle(`📊 Unfinished ${nodeType} (Level ${level}) on Land ${landId}`)
-            .setDescription(`**Expected Dev Points:** ${expectedDevPoints}\n**Total Offenders:** ${offenders.length}`)
-            .setColor(0xFF0000)
-            .setFooter({ text: `Page ${page + 1}/${Math.ceil(offenders.length / pageSize)}` })
-            .setTimestamp()
-            .addFields(
-              currentOffenders.map((offender, index) => ({
-                name: `${startIdx + index + 1}. ${offender.player}`,
-                value: `🎯 Total Dev Points: ${offender.totalDevPoints}\n❌ Missing: ${offender.unfinishedDevPoints}`
-              }))
-            );
-        };
-
-        const generateButtons = (page) => {
-          const maxPage = Math.ceil(offenders.length / pageSize) - 1;
-          return new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('first')
-                .setLabel('⏮️')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(page === 0),
-              new ButtonBuilder()
-                .setCustomId('prev')
-                .setLabel('◀️')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(page === 0),
-              new ButtonBuilder()
-                .setCustomId('next')
-                .setLabel('▶️')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(page >= maxPage),
-              new ButtonBuilder()
-                .setCustomId('last')
-                .setLabel('⏭️')
-                .setStyle(ButtonStyle.Primary)
-                .setDisabled(page >= maxPage)
-            );
-        };
-
-        const message = await interaction.editReply({
-          embeds: [generateEmbed(currentPage)],
-          components: [generateButtons(currentPage)],
-          ephemeral: true,
-          fetchReply: true
-        });
-
-        const collector = message.createMessageComponentCollector({ time: 300000 });
-
-        collector.on('collect', async i => {
-          if (i.user.id !== interaction.user.id) {
-            await i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
-            return;
-          }
-
-          const maxPage = Math.ceil(offenders.length / pageSize) - 1;
-          switch (i.customId) {
-            case 'first': currentPage = 0; break;
-            case 'prev': currentPage = Math.max(0, currentPage - 1); break;
-            case 'next': currentPage = Math.min(maxPage, currentPage + 1); break;
-            case 'last': currentPage = maxPage; break;
-          }
-
-          await i.update({
-            embeds: [generateEmbed(currentPage)],
-            components: [generateButtons(currentPage)]
-          });
-        });
-
-        collector.on('end', async () => {
-          const finalEmbed = generateEmbed(currentPage)
-            .setFooter({ text: 'Interaction timeout - Session ended' });
-          await message.edit({
-            embeds: [finalEmbed],
-            components: []
-          });
-        });
-      } catch (error) {
-        console.error('Error fetching contributions:', error);
-        await interaction.editReply({ content: 'An error occurred while fetching contributions.', ephemeral: true });
+      const response = await fetchLandContributions(landId, fromDate, toDate);
+      if (!response?.contribution) {
+        await interaction.editReply({ content: 'Failed to fetch contributions. Please check the Land ID and date range.' });
+        return;
       }
+
+      const nodeData = nodeLevels[nodeType].find(node => node.level === level);
+      if (!nodeData) {
+        await interaction.editReply({ content: 'Invalid node type or level.' });
+        return;
+      }
+
+      const expectedDevPoints = nodeData.expectedDevPoints;
+      const offenders = response.contribution
+        .filter(contribution => contribution.continent === 61)
+        .reduce((acc, contribution) => {
+          const unfinishedDevPoints = expectedDevPoints - contribution.total;
+          if (unfinishedDevPoints > 0) {
+            acc.push({
+              player: contribution.name,
+              totalDevPoints: contribution.total,
+              unfinishedDevPoints
+            });
+          }
+          return acc;
+        }, [])
+        .sort((a, b) => b.unfinishedDevPoints - a.unfinishedDevPoints);
+
+      if (offenders.length === 0) {
+        await interaction.editReply({ content: 'No unfinished contributions found for Continent 61.' });
+        return;
+      }
+
+      const pageSize = 5;
+      let currentPage = 0;
+
+      const generateEmbed = (page) => {
+        const startIdx = page * pageSize;
+        const currentOffenders = offenders.slice(startIdx, startIdx + pageSize);
+
+        return new EmbedBuilder()
+          .setTitle(`📊 Unfinished ${nodeType} (Level ${level}) on Land ${landId}`)
+          .setDescription(`**Expected Dev Points:** ${expectedDevPoints}\n**Total Offenders:** ${offenders.length}`)
+          .setColor(0xFF0000)
+          .setFooter({ text: `Page ${page + 1}/${Math.ceil(offenders.length / pageSize)}` })
+          .setTimestamp()
+          .addFields(
+            currentOffenders.map((offender, index) => ({
+              name: `${startIdx + index + 1}. ${offender.player}`,
+              value: `🎯 Total Dev Points: ${offender.totalDevPoints}\n❌ Missing: ${offender.unfinishedDevPoints}`
+            }))
+          );
+      };
+
+      const generateButtons = (page) => {
+        const maxPage = Math.ceil(offenders.length / pageSize) - 1;
+        return new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('first')
+              .setLabel('⏮️')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(page === 0),
+            new ButtonBuilder()
+              .setCustomId('prev')
+              .setLabel('◀️')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(page === 0),
+            new ButtonBuilder()
+              .setCustomId('next')
+              .setLabel('▶️')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(page >= maxPage),
+            new ButtonBuilder()
+              .setCustomId('last')
+              .setLabel('⏭️')
+              .setStyle(ButtonStyle.Primary)
+              .setDisabled(page >= maxPage)
+          );
+      };
+
+      const message = await interaction.editReply({
+        embeds: [generateEmbed(currentPage)],
+        components: [generateButtons(currentPage)],
+        fetchReply: true
+      });
+
+      const collector = message.createMessageComponentCollector({ time: 300000 });
+
+      collector.on('collect', async i => {
+        if (i.user.id !== interaction.user.id) {
+          await i.reply({ content: 'You cannot use these buttons.', ephemeral: true });
+          return;
+        }
+
+        const maxPage = Math.ceil(offenders.length / pageSize) - 1;
+        switch (i.customId) {
+          case 'first': currentPage = 0; break;
+          case 'prev': currentPage = Math.max(0, currentPage - 1); break;
+          case 'next': currentPage = Math.min(maxPage, currentPage + 1); break;
+          case 'last': currentPage = maxPage; break;
+        }
+
+        await i.update({
+          embeds: [generateEmbed(currentPage)],
+          components: [generateButtons(currentPage)]
+        });
+      });
+
+      collector.on('end', async () => {
+        const finalEmbed = generateEmbed(currentPage)
+          .setFooter({ text: 'Interaction timeout - Session ended' });
+        await message.edit({
+          embeds: [finalEmbed],
+          components: []
+        });
+      });
     } catch (error) {
       console.error('RSS command error:', error);
-      if (error.code === 10062) return;
+      if (error.code === 10062) return; // Ignore unknown interaction errors
       
       try {
-        if (interaction.deferred) {
-          await interaction.editReply({ content: 'An error occurred while processing the command.', ephemeral: true });
-        } else if (!interaction.replied) {
+        if (!replied) {
           await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
+        } else {
+          await interaction.editReply({ content: 'An error occurred while processing the command.' });
         }
       } catch (e) {
         console.error('Failed to send error response:', e);
