@@ -2,7 +2,7 @@ const fetch = require('node-fetch');
 
 module.exports = {
   fetchLandContributions: async (landId, fromDate, toDate) => {
-    const url = `https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${fromDate}&to=${toDate}&continent=61`;
+    const url = `https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${fromDate}&to=${toDate}`;
     try {
       const response = await fetch(url, {
         timeout: 8000,
