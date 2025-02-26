@@ -61,7 +61,9 @@ module.exports = {
   async execute(interaction) {
     let replied = false;
     try {
-      await interaction.deferReply({ ephemeral: true });
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.deferReply({ ephemeral: true });
+      }
       replied = true;
 
       const landId = interaction.options.getNumber('land_id');
@@ -189,13 +191,20 @@ module.exports = {
       });
     } catch (error) {
       console.error('RSS command error:', error);
-      if (error.code === 10062) return; // Ignore unknown interaction errors
+      
+      // Ignore unknown interaction errors
+      if (error.code === 10062) return;
       
       try {
-        if (!replied) {
-          await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
-        } else {
-          await interaction.editReply({ content: 'An error occurred while processing the command.' });
+        const errorMessage = { 
+          content: 'An error occurred while processing the command.',
+          ephemeral: true 
+        };
+        
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply(errorMessage);
+        } else if (interaction.deferred) {
+          await interaction.editReply(errorMessage);
         }
       } catch (e) {
         console.error('Failed to send error response:', e);
