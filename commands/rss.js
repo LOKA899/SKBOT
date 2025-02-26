@@ -36,45 +36,42 @@ module.exports = {
         .setRequired(true)),
 
   async autocomplete(interaction) {
-    const focusedValue = interaction.options.getFocused();
-    const today = new Date();
-    const dates = [];
-    
-    // Generate last 7 days
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const formattedDate = date.toISOString().split('T')[0];
-      dates.push({ name: formattedDate, value: formattedDate });
-    }
+    try {
+      const focusedOption = interaction.options.getFocused(true);
+      if (!['from_date', 'to_date'].includes(focusedOption.name)) return;
 
-    const filtered = dates.filter(date => date.name.startsWith(focusedValue));
-    await interaction.respond(filtered);
+      const dates = Array.from({length: 7}, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const formattedDate = date.toISOString().split('T')[0];
+        return { name: formattedDate, value: formattedDate };
+      });
+
+      const filtered = dates.filter(date => 
+        date.name.toLowerCase().includes(focusedOption.value.toLowerCase())
+      );
+
+      await interaction.respond(
+        filtered.slice(0, 25)
+      );
+    } catch (error) {
+      console.error('Autocomplete error:', error);
+      await interaction.respond([]);
+    }
   },
 
   async execute(interaction) {
-    console.log(`[RSS Command] Command received from user ${interaction.user.tag} (${interaction.user.id})`);
     await interaction.deferReply({ ephemeral: true });
     const landId = interaction.options.getString('land_id');
     const fromDate = interaction.options.getString('from_date');
     const toDate = interaction.options.getString('to_date');
-    console.log(`[RSS Command] Parameters: Land ID: ${landId}, From: ${fromDate}, To: ${toDate}`);
     const nodeType = interaction.options.getString('node_type');
     const level = interaction.options.getInteger('level');
 
     try {
-      console.log(`[RSS Command] Fetching contributions for Land ${landId}`);
       const response = await fetchLandContributions(landId, fromDate, toDate);
-      console.log(`[RSS Command] API Response received: ${response ? 'Success' : 'Failed'}`);
-      console.log(`[RSS Command] Response data:`, JSON.stringify(response, null, 2));
-      if (!response || !response.contribution) {
+      if (!response?.contribution) {
         await interaction.editReply({ content: 'Failed to fetch contributions. Please check the Land ID and date range.', ephemeral: true });
-        return;
-      }
-
-      const filteredContributions = response.contribution.filter(contribution => contribution.continent === 61);
-      if (filteredContributions.length === 0) {
-        await interaction.editReply({ content: 'No contributions found for Continent 61.', ephemeral: true });
         return;
       }
 
@@ -85,14 +82,25 @@ module.exports = {
       }
 
       const expectedDevPoints = nodeData.expectedDevPoints;
-      const offenders = filteredContributions
-        .map(contribution => ({
-          player: contribution.name,
-          totalDevPoints: contribution.total,
-          unfinishedDevPoints: expectedDevPoints - contribution.total
-        }))
-        .filter(player => player.unfinishedDevPoints > 0)
+      const offenders = response.contribution
+        .filter(contribution => contribution.continent === 61)
+        .reduce((acc, contribution) => {
+          const unfinishedDevPoints = expectedDevPoints - contribution.total;
+          if (unfinishedDevPoints > 0) {
+            acc.push({
+              player: contribution.name,
+              totalDevPoints: contribution.total,
+              unfinishedDevPoints
+            });
+          }
+          return acc;
+        }, [])
         .sort((a, b) => b.unfinishedDevPoints - a.unfinishedDevPoints);
+
+      if (offenders.length === 0) {
+        await interaction.editReply({ content: 'No unfinished contributions found for Continent 61.', ephemeral: true });
+        return;
+      }
 
       const pageSize = 5;
       let currentPage = 0;
@@ -101,25 +109,23 @@ module.exports = {
         const startIdx = page * pageSize;
         const currentOffenders = offenders.slice(startIdx, startIdx + pageSize);
 
-        const embed = new EmbedBuilder()
+        return new EmbedBuilder()
           .setTitle(`📊 Unfinished ${nodeType} (Level ${level}) on Land ${landId}`)
           .setDescription(`**Expected Dev Points:** ${expectedDevPoints}\n**Total Offenders:** ${offenders.length}`)
           .setColor(0xFF0000)
           .setFooter({ text: `Page ${page + 1}/${Math.ceil(offenders.length / pageSize)}` })
-          .setTimestamp();
-
-        currentOffenders.forEach((offender, index) => {
-          embed.addFields({
-            name: `${startIdx + index + 1}. ${offender.player}`,
-            value: `🎯 Total Dev Points: ${offender.totalDevPoints}\n❌ Missing: ${offender.unfinishedDevPoints}`
-          });
-        });
-
-        return embed;
+          .setTimestamp()
+          .addFields(
+            currentOffenders.map((offender, index) => ({
+              name: `${startIdx + index + 1}. ${offender.player}`,
+              value: `🎯 Total Dev Points: ${offender.totalDevPoints}\n❌ Missing: ${offender.unfinishedDevPoints}`
+            }))
+          );
       };
 
       const generateButtons = (page) => {
-        const row = new ActionRowBuilder()
+        const maxPage = Math.ceil(offenders.length / pageSize) - 1;
+        return new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
               .setCustomId('first')
@@ -135,19 +141,19 @@ module.exports = {
               .setCustomId('next')
               .setLabel('▶️')
               .setStyle(ButtonStyle.Primary)
-              .setDisabled(page >= Math.ceil(offenders.length / pageSize) - 1),
+              .setDisabled(page >= maxPage),
             new ButtonBuilder()
               .setCustomId('last')
               .setLabel('⏭️')
               .setStyle(ButtonStyle.Primary)
-              .setDisabled(page >= Math.ceil(offenders.length / pageSize) - 1)
+              .setDisabled(page >= maxPage)
           );
-        return row;
       };
 
       const message = await interaction.editReply({
         embeds: [generateEmbed(currentPage)],
         components: [generateButtons(currentPage)],
+        ephemeral: true,
         fetchReply: true
       });
 
@@ -159,19 +165,12 @@ module.exports = {
           return;
         }
 
+        const maxPage = Math.ceil(offenders.length / pageSize) - 1;
         switch (i.customId) {
-          case 'first':
-            currentPage = 0;
-            break;
-          case 'prev':
-            currentPage = Math.max(0, currentPage - 1);
-            break;
-          case 'next':
-            currentPage = Math.min(Math.ceil(offenders.length / pageSize) - 1, currentPage + 1);
-            break;
-          case 'last':
-            currentPage = Math.ceil(offenders.length / pageSize) - 1;
-            break;
+          case 'first': currentPage = 0; break;
+          case 'prev': currentPage = Math.max(0, currentPage - 1); break;
+          case 'next': currentPage = Math.min(maxPage, currentPage + 1); break;
+          case 'last': currentPage = maxPage; break;
         }
 
         await i.update({
@@ -189,10 +188,7 @@ module.exports = {
         });
       });
     } catch (error) {
-      console.error(`[RSS Command] Error executing command for user ${interaction.user.tag}:`, error);
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({ content: 'An error occurred while processing the command.', ephemeral: true });
-      }
+      await interaction.editReply({ content: 'An error occurred while processing the command.', ephemeral: true });
     }
   }
 };

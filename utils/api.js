@@ -1,14 +1,16 @@
+
 const fetch = require('node-fetch');
 
 module.exports = {
   fetchLandContributions: async (landId, fromDate, toDate) => {
-    const url = `https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${fromDate}&to=${toDate}`;
     try {
-      const response = await fetch(url);
-      const data = await response.json();
-      return data;
+      const response = await fetch(
+        `https://api-lok-live.leagueofkingdoms.com/api/stat/land/contribution?landId=${landId}&from=${fromDate}&to=${toDate}`,
+        { timeout: 8000 }
+      );
+      if (!response.ok) throw new Error('API response was not ok');
+      return response.json();
     } catch (error) {
-      console.error('Error fetching land contributions:', error);
       return null;
     }
   }
