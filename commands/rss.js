@@ -31,7 +31,7 @@ module.exports = {
           { name: 'Crystal Mine', value: 'crystalMine' },
           { name: 'DSA', value: 'dsa' }
         ))
-    .addIntegerOption(option =>
+    .addNumberOption(option =>
       option.setName('level')
         .setDescription('The level of the node')
         .setRequired(true)),
@@ -70,7 +70,7 @@ module.exports = {
       const fromDate = interaction.options.getString('from_date');
       const toDate = interaction.options.getString('to_date');
       const nodeType = interaction.options.getString('node_type');
-      const level = interaction.options.getInteger('level');
+      const level = interaction.options.getNumber('level');
 
       const response = await fetchLandContributions(landId, fromDate, toDate);
       if (!response?.contribution) {
